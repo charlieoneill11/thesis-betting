@@ -204,6 +204,8 @@ def create_order_df(orders, order_type):
         df = df[expected_columns]
         # Format timestamp for better readability
         df['timestamp'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        # Limit to the first 7 rows
+        df = df.head(7)
     else:
         # Create an empty DataFrame with the desired columns
         df = pd.DataFrame(columns=['price', 'volume', 'user_id', 'timestamp'])
@@ -233,7 +235,8 @@ with col2:
 # -----------------------------
 st.subheader("Submit an Order")
 order_type = st.selectbox("Order Type", ["buy", "sell"], key="order_type_select")
-price = st.number_input("Price", min_value=0, step=1, key="price_input")
+#price = st.number_input("Price", min_value=0, step=1, key="price_input")
+price = st.number_input("Price", min_value=0, max_value=100, step=1, key="price_input")
 volume = st.number_input("Volume", min_value=1, max_value=10, step=1, key="volume_input")  # Set max_value=10
 submit_order = st.button("Submit Order")
 
