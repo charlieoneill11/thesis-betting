@@ -71,7 +71,6 @@ try:
     orders_col = db['orders']
     trades_col = db['trades']
     newsfeed_col = db['newsfeed']  # Added Newsfeed collection
-    st.success("Connected to MongoDB successfully!")
 except Exception as e:
     st.error(f"Error connecting to MongoDB: {e}")
     st.stop()
