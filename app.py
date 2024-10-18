@@ -56,7 +56,7 @@ if not st.session_state['logged_in']:
     login()
 else:
     # Show logout button and user info
-    st.info(f"Logged in as: **{st.session_state['username']}**")
+    st.info(f"Logged in!")
     logout()
 
 # -----------------------------
