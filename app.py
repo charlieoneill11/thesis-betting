@@ -11,15 +11,7 @@ import plotly.graph_objects as go
 # -----------------------------
 # In a production environment, never store passwords in plain text.
 # Consider hashing passwords and storing them securely.
-USER_CREDENTIALS = {
-    "Charlie": "reason211",
-    "Poswell": "abu",
-    "Sengupta": "george",
-    "Jackman": "jeezmate",
-    "Wu": "wutang",
-    "Bean": "mrbean",
-    "Georgie": "bully"
-}
+USER_CREDENTIALS = list(st.secrets["passwords"].keys())
 
 # -----------------------------
 # 2. Initialize Session State
@@ -41,10 +33,11 @@ def login():
         password = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Login")
         if submitted:
-            if username in USER_CREDENTIALS and USER_CREDENTIALS[username] == password:
-                st.session_state['logged_in'] = True
-                st.session_state['username'] = username
-                st.success("Logged in successfully!")
+            if str(username) in USER_CREDENTIALS:
+                if (st.secrets.passwords[username]) == password:
+                    st.session_state['logged_in'] = True
+                    st.session_state['username'] = username
+                    st.success("Logged in successfully!")
             else:
                 st.error("Invalid username or password.")
 
@@ -69,7 +62,7 @@ else:
 # -----------------------------
 # 5. MongoDB Connection
 # -----------------------------
-MONGO_CONNECTION_STRING = "mongodb+srv://charlesoneill:Reason211@printcoin.yswrwkc.mongodb.net/?retryWrites=true&w=majority&appName=PrintCoin"
+MONGO_CONNECTION_STRING = st.secrets['MONGO_CONNECTION_STRING']
 
 try:
     client = MongoClient(MONGO_CONNECTION_STRING)
