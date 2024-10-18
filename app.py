@@ -361,25 +361,54 @@ with tab_main:
 
 with tab_recent_trades:
     # -----------------------------
-    # 13. Display Recent Trades
+    # 13. Display Recent Trades Across All Markets
     # -----------------------------
-    st.header("Recent Trades")
-    selected_market_recent = selected_market  # Reuse the selected_market from the main tab
+    st.header("Recent Trades Across All Markets")
 
-    trades = list(trades_col.find({"market_id": selected_market_recent}).sort("timestamp", -1).limit(20))
+    # Fetch the 20 most recent trades across all markets, sorted by timestamp descending
+    trades = list(trades_col.find().sort("timestamp", -1).limit(20))
+    
     if trades:
         trades_df = pd.DataFrame(trades)
-        # Select relevant columns
+        
+        # Check if 'market_id' exists in the trade documents
+        if 'market_id' not in trades_df.columns:
+            st.error("Trade documents do not contain 'market_id'.")
+            st.stop()
+        
+        # Select relevant columns, including 'market_id' to identify the market
         trades_df = trades_df[[
             'trade_id',
+            'market_id',  # Included to identify the market
             'buy_id',
             'sell_id',
             'price',
             'volume',
             'timestamp'
         ]]
-        # Format timestamp
+        
+        # Optional: Map 'market_id' to a more readable market name
+        # Assuming 'markets_col' contains 'market_id' and 'market_name' fields
+        markets = list(markets_col.find({}, {"market_id": 1, "market_name": 1}))
+        market_id_map = {market['market_id']: market.get('market_name', market['market_id']) for market in markets}
+        trades_df['market_name'] = trades_df['market_id'].map(market_id_map)
+        
+        # Reorder columns to place 'market_name' next to 'market_id' or replace 'market_id'
+        trades_df = trades_df[[
+            'trade_id',
+            'market_id',
+            'market_name',  # Added for readability
+            'buy_id',
+            'sell_id',
+            'price',
+            'volume',
+            'timestamp'
+        ]]
+        
+        # Format timestamp for better readability
         trades_df['timestamp'] = pd.to_datetime(trades_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Display the DataFrame in the app
         st.dataframe(trades_df)
     else:
         st.info("No trades have been executed yet.")
