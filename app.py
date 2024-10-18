@@ -9,8 +9,6 @@ import plotly.graph_objects as go
 # -----------------------------
 # 1. Define User Credentials
 # -----------------------------
-# In a production environment, never store passwords in plain text.
-# Consider hashing passwords and storing them securely.
 USER_CREDENTIALS = list(st.secrets["passwords"].keys())
 
 # -----------------------------
@@ -112,9 +110,36 @@ with tab_main:
             
             highest_buy = highest_buy_order['price'] if highest_buy_order else None
             lowest_sell = lowest_sell_order['price'] if lowest_sell_order else None
+
+            # Find the most recent trade price
+            last_trade_price = trades_df.iloc[-1]['price']
+
             
             # Create Plotly Figure
             fig = go.Figure()
+
+            # Add trades as black diamonds
+            fig.add_trace(
+                go.Scatter(
+                    x=trades_df['timestamp'],
+                    y=trades_df['price'],
+                    mode='markers',
+                    marker=dict(symbol='diamond', color='black', size=10),
+                    name='Trades'
+                )
+            )
+
+            # Add the most recent trade price as a horizontal dashed black line
+            fig.add_trace(
+                go.Scatter(
+                    x=[trades_df['timestamp'].min(), trades_df['timestamp'].max()],
+                    y=[last_trade_price, last_trade_price],
+                    mode='lines',
+                    name='Last Trade Price',
+                    line=dict(color='black', dash='dash')
+                )
+            )
+
             
             # Add EMA line
             fig.add_trace(
