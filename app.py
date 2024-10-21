@@ -11,6 +11,89 @@ import plotly.graph_objects as go
 # -----------------------------
 USER_CREDENTIALS = list(st.secrets["passwords"].keys())
 
+def match_orders(selected_market):
+    """Continuously matches buy and sell orders in the selected market."""
+    trades_executed = 0  # Counter for executed trades
+
+    while True:
+        # Fetch the highest buy order
+        highest_buy = orders_col.find_one(
+            {"market_id": selected_market, "type": "buy"},
+            sort=[("price", -1), ("timestamp", 1)]
+        )
+        
+        # Fetch the lowest sell order
+        lowest_sell = orders_col.find_one(
+            {"market_id": selected_market, "type": "sell"},
+            sort=[("price", 1), ("timestamp", 1)]
+        )
+        
+        # If either buy or sell order doesn't exist, exit the loop
+        if not highest_buy or not lowest_sell:
+            break
+        
+        # Check if the highest buy price is >= lowest sell price
+        if highest_buy['price'] >= lowest_sell['price']:
+            buyer_id = highest_buy['user_id']
+            seller_id = lowest_sell['user_id']
+            
+            # Self-trade prevention (excluding "Charlie")
+            if buyer_id == seller_id and buyer_id != "Charlie":
+                # Skip this pair and optionally handle it differently
+                # For simplicity, we'll remove the buy order to prevent blocking
+                orders_col.delete_one({"order_id": highest_buy['order_id']})
+                st.warning(f"Self-trade detected and prevented for user: {buyer_id}")
+                continue  # Proceed to the next pair
+            
+            # Determine trade volume and price
+            trade_volume = min(highest_buy['volume'], lowest_sell['volume'])
+            trade_price = lowest_sell['price']  # You can choose a different pricing strategy
+            
+            # Create the trade record
+            trade = {
+                "trade_id": str(uuid.uuid4()),
+                "market_id": selected_market,
+                "buy_order_id": highest_buy['order_id'],
+                "sell_order_id": lowest_sell['order_id'],
+                "buy_id": buyer_id,
+                "sell_id": seller_id,
+                "price": trade_price,
+                "volume": trade_volume,
+                "timestamp": datetime.utcnow()
+            }
+            trades_col.insert_one(trade)
+            
+            # Update the buy order volume
+            new_buy_volume = highest_buy['volume'] - trade_volume
+            if new_buy_volume > 0:
+                orders_col.update_one(
+                    {"order_id": highest_buy['order_id']},
+                    {"$set": {"volume": new_buy_volume}}
+                )
+            else:
+                orders_col.delete_one({"order_id": highest_buy['order_id']})
+            
+            # Update the sell order volume
+            new_sell_volume = lowest_sell['volume'] - trade_volume
+            if new_sell_volume > 0:
+                orders_col.update_one(
+                    {"order_id": lowest_sell['order_id']},
+                    {"$set": {"volume": new_sell_volume}}
+                )
+            else:
+                orders_col.delete_one({"order_id": lowest_sell['order_id']})
+            
+            trades_executed += 1
+            st.success(f"Trade executed: {trade_volume} units at price {trade_price}")
+        else:
+            # No more matching possible
+            break
+    
+    if trades_executed > 0:
+        st.info(f"Total Trades Executed: {trades_executed}")
+    else:
+        st.info("No matching orders available at the moment.")
+
 # -----------------------------
 # 2. Initialize Session State
 # -----------------------------
@@ -294,6 +377,8 @@ with tab_main:
                     # Automatically attempt to match orders after submission
                     # Delay matching by a few seconds to simulate "a few seconds after submission"
                     time.sleep(1)  # 1-second delay
+                    match_orders(selected_market)
+                    
                     # Perform matching
                     # Fetch the latest orders again after delay
                     buy_orders = list(orders_col.find({"market_id": selected_market, "type": "buy"}).sort("price", -1))
@@ -358,6 +443,10 @@ with tab_main:
     # -----------------------------
     # Since we are not using st_autorefresh or st.experimental_rerun, automatic matching on time intervals isn't feasible.
     # Instead, matching occurs after order submission.
+
+# -----------------------------
+# 12. Order Matching Function
+# -----------------------------
 
 with tab_recent_trades:
     # -----------------------------
