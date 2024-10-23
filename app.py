@@ -542,7 +542,7 @@ with tab_newsfeed:
     # 14.2 Display Recent Comments
     # -----------------------------
     st.subheader("Most Recent Comments")
-    recent_comments = list(newsfeed_col.find().sort("timestamp", -1).limit(25))
+    recent_comments = list(newsfeed_col.find().sort("timestamp", -1).limit(50))
     
     if recent_comments:
         comments_df = pd.DataFrame(recent_comments)
